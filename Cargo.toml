@@ -1,0 +1,6 @@
+[package]
+name = "anno_1800_mod_creator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
