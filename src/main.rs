@@ -1,6 +1,8 @@
 use std::path::PathBuf;
+use xml::XmlTag;
 
 mod helper;
+mod xml;
 
 fn main() {
     // The path to the directory containing the properties, templates, and assets files.
@@ -28,4 +30,15 @@ fn main() {
     for path in assets_paths {
         println!("- {}", path.display());
     }
+
+    // Mod name
+    let mod_name = "Production";
+
+    // Xml structure
+    let xml_structure = XmlTag::Branch {
+        name: "FactoryBase".to_string(),
+        children: vec![XmlTag::Leaf {
+            name: "CycleTime".to_string(),
+        }],
+    };
 }
