@@ -17,6 +17,12 @@ fn main() {
         .join("Anno1800ModSupport")
         .join("filtered_data");
 
+    // The path to the directory containing the mod files.
+    let mod_path = PathBuf::from("D:\\")
+        .join("Ubisoft Games")
+        .join("Anno 1800")
+        .join("mods");
+
     // Get the paths of properties, templates, and assets files.
     let (properties_paths, template_paths, assets_paths) = helper::get_paths(&path);
 
@@ -41,47 +47,53 @@ fn main() {
     }
     println!("----------------------------------------");
 
-    // Mod name
-    let mod_name: &str = "Production";
-
-    // XML structure
-    let query: XmlTag = XmlTag {
-        name: "FactoryBase".to_string(),
-        content: Content::Branch(vec![XmlTag {
-            name: "CycleTime".to_string(),
-            content: Content::Leaf,
-        }]),
-    };
-
-    // Excluded templates
-    let excluded_templates: Vec<String> = vec![
-        "Heater_Arctic".to_owned(),
-        "PowerplantBuilding".to_owned(),
-        "BuffFactoryModule".to_owned(),
-        "Mall".to_owned(),
-        "TowerRestaurant".to_owned(),
-    ];
-
-    // Excluded GUIDs
-    let excluded_guids: Vec<String> = vec![];
-
-    // Forced GUIDs
-    let forced_guids: Vec<String> = vec!["24861".to_owned(), "24845".to_owned()];
-
     // // Mod name
-    // let mod_name = "Crafting";
+    // let mod_name: &str = "Production";
 
-    // // Xml structure
-    // let xml_structure = XmlTag {
-    //     name: "Craftable".to_string(),
+    // // XML structure
+    // let query: XmlTag = XmlTag {
+    //     name: "FactoryBase".to_string(),
     //     content: Content::Branch(vec![XmlTag {
-    //         name: "CraftingTime".to_string(),
+    //         name: "CycleTime".to_string(),
     //         content: Content::Leaf,
     //     }]),
     // };
 
     // // Excluded templates
-    // let excluded_templates: Vec<String> = vec![];
+    // let excluded_templates: Vec<String> = vec![
+    //     "Heater_Arctic".to_owned(),
+    //     "PowerplantBuilding".to_owned(),
+    //     "BuffFactoryModule".to_owned(),
+    //     "Mall".to_owned(),
+    //     "TowerRestaurant".to_owned(),
+    // ];
+
+    // // Excluded GUIDs
+    // let excluded_guids: Vec<String> = vec![];
+
+    // // Forced GUIDs
+    // let forced_guids: Vec<String> = vec!["24861".to_owned(), "24845".to_owned()];
+
+    // Mod name
+    let mod_name = "Crafting";
+
+    // Xml structure
+    let query = XmlTag {
+        name: "Craftable".to_string(),
+        content: Content::Branch(vec![XmlTag {
+            name: "CraftingTime".to_string(),
+            content: Content::Leaf,
+        }]),
+    };
+
+    // Excluded templates
+    let excluded_templates: Vec<String> = vec![];
+
+    // Excluded GUIDs
+    let excluded_guids: Vec<String> = vec![];
+
+    // Forced GUIDs
+    let forced_guids: Vec<String> = vec![];
 
     let mut identifiers: Vec<Identifier> = Vec::new();
     let mut identifiers_as_parent: HashMap<ParentIdentifier, Identifier> = HashMap::new();
@@ -97,10 +109,17 @@ fn main() {
         // parse the xml file
         let xml = roxmltree::Document::parse(&xml_string).unwrap();
 
+        let inner_data_path = path
+            .iter()
+            .skip(5)
+            .map(|s| s.to_str().unwrap())
+            .collect::<Vec<_>>()
+            .join("\\");
+
         xml.descendants()
             .filter(|node| node.tag_name().name() == "DefaultValues")
             .for_each(|node| {
-                let identifier = create_default_values_identifier(&path, &node);
+                let identifier = create_default_values_identifier(&inner_data_path, &node);
 
                 if !helper::has_direct_child(&node, &query) {
                     return;
@@ -128,10 +147,17 @@ fn main() {
         // parse the xml file
         let xml = roxmltree::Document::parse(&xml_string).unwrap();
 
+        let inner_data_path = path
+            .iter()
+            .skip(5)
+            .map(|s| s.to_str().unwrap())
+            .collect::<Vec<_>>()
+            .join("\\");
+
         xml.descendants()
             .filter(|node| node.tag_name().name() == "Template")
             .for_each(|node| {
-                let Some(identifier) = create_template_identifier(&path, &node) else {
+                let Some(identifier) = create_template_identifier(&inner_data_path, &node) else {
                     return;
                 };
 
@@ -177,10 +203,17 @@ fn main() {
         // parse the xml file
         let xml = roxmltree::Document::parse(&xml_string).unwrap();
 
+        let inner_data_path = path
+            .iter()
+            .skip(5)
+            .map(|s| s.to_str().unwrap())
+            .collect::<Vec<_>>()
+            .join("\\");
+
         xml.descendants()
             .filter(|node| node.tag_name().name() == "Asset")
             .for_each(|node| {
-                let identifier = create_asset_identifier(&path, &node);
+                let identifier = create_asset_identifier(&inner_data_path, &node);
                 if identifiers.contains(&identifier) {
                     return;
                 }
@@ -258,11 +291,21 @@ fn main() {
 
     //     strings.push(format!("{:?}", states.get(identifier).unwrap()));
 
-    //     strings.push(format!("{:?}", contents.get(identifier)));
+    //     strings.push(format!("{:?}", contents.get(identifier).unwrap()));
 
     //     println!("{}", strings.join(" | "));
     //     println!("----------------------------------------");
     // }
+
+    helper::create_mod(
+        &mod_path,
+        mod_name,
+        &identifiers,
+        &identifiers_as_parent,
+        &parent_identifiers,
+        &states,
+        &contents,
+    );
 }
 
 fn create_asset_parent_identifier(node: &roxmltree::Node<'_, '_>) -> ParentIdentifier {
@@ -325,9 +368,9 @@ fn create_asset_parent_identifier(node: &roxmltree::Node<'_, '_>) -> ParentIdent
     ParentIdentifier::None
 }
 
-fn create_asset_identifier(path: &PathBuf, node: &roxmltree::Node<'_, '_>) -> Identifier {
+fn create_asset_identifier(path: &String, node: &roxmltree::Node<'_, '_>) -> Identifier {
     let xpath_identifier = Identifier {
-        file_path: path.display().to_string(),
+        file_path: path.clone(),
         kind: Kind::XPath,
         value: helper::get_xpath(&node),
     };
@@ -362,16 +405,13 @@ fn create_asset_identifier(path: &PathBuf, node: &roxmltree::Node<'_, '_>) -> Id
     };
 
     Identifier {
-        file_path: path.display().to_string(),
+        file_path: path.clone(),
         kind: Kind::GUID,
         value: guid_value.to_string(),
     }
 }
 
-fn create_template_identifier(
-    path: &PathBuf,
-    node: &roxmltree::Node<'_, '_>,
-) -> Option<Identifier> {
+fn create_template_identifier(path: &String, node: &roxmltree::Node<'_, '_>) -> Option<Identifier> {
     let name_node = node
         .children()
         .filter(|n| n.tag_name().name() == "Name")
@@ -382,15 +422,15 @@ fn create_template_identifier(
         .expect(format!("Problem with name text in {}", helper::get_xpath(&node)).as_str());
 
     Some(Identifier {
-        file_path: path.display().to_string(),
+        file_path: path.clone(),
         kind: Kind::Name,
         value: name_value.to_string(),
     })
 }
 
-fn create_default_values_identifier(path: &PathBuf, node: &roxmltree::Node<'_, '_>) -> Identifier {
+fn create_default_values_identifier(path: &String, node: &roxmltree::Node<'_, '_>) -> Identifier {
     Identifier {
-        file_path: path.display().to_string(),
+        file_path: path.clone(),
         kind: Kind::XPath,
         value: helper::get_xpath(&node),
     }

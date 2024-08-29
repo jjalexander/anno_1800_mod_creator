@@ -1,10 +1,13 @@
 use crate::{
+    identifier::{Identifier, ParentIdentifier},
+    state::State,
     xml_node::{XmlNode, XmlNodeData},
     xml_structure::{Content, XmlTag},
 };
 use itertools::Itertools;
 use roxmltree::Node;
-use std::path::PathBuf;
+use std::io::Write;
+use std::{collections::HashMap, path::PathBuf};
 use walkdir::WalkDir;
 
 pub(crate) fn get_paths(path: &PathBuf) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
@@ -215,4 +218,105 @@ fn create_content(query: &XmlTag, parent_content: Option<&XmlNode>) -> Option<Xm
             });
         }
     }
+}
+
+pub(crate) fn create_mod(
+    output_path: &PathBuf,
+    mod_name: &str,
+    identifiers: &Vec<Identifier>,
+    identifiers_as_parent: &HashMap<ParentIdentifier, Identifier>,
+    parent_identifiers: &HashMap<Identifier, ParentIdentifier>,
+    states: &HashMap<Identifier, State>,
+    contents: &HashMap<Identifier, XmlNode>,
+) {
+    let mod_path = output_path.join(enhanced_name(mod_name));
+
+    delete_mod_files(&mod_path);
+
+    create_mod_directory(&mod_path);
+
+    let mut path_vs_mod_ops: HashMap<String, Vec<String>> = HashMap::new();
+
+    identifiers.into_iter().for_each(|identifier| {
+        let file_path = identifier.file_path.clone();
+        let content = contents.get(identifier).unwrap();
+        let state = states.get(identifier).unwrap();
+
+        let mod_ops = create_mod_ops(content, state);
+
+        let mod_ops = mod_ops
+            .into_iter()
+            .map(|mod_op| format!("{}: {}", identifier.value, mod_op))
+            .collect::<Vec<_>>();
+
+        if mod_ops.is_empty() {
+            return;
+        }
+
+        path_vs_mod_ops
+            .entry(file_path)
+            .or_insert_with(Vec::new)
+            .extend(mod_ops);
+    });
+
+    path_vs_mod_ops.iter().for_each(|(path, mod_ops)| {
+        let full_path = mod_path.join(path);
+        let parent_path = full_path.parent().unwrap();
+        std::fs::create_dir_all(parent_path).unwrap();
+        std::fs::File::create(&full_path).unwrap();
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .open(full_path)
+            .unwrap();
+        mod_ops.iter().for_each(|mod_op| {
+            writeln!(file, "{}", mod_op).unwrap();
+        });
+    });
+}
+
+fn create_mod_ops(content: &XmlNode, state: &State) -> Vec<String> {
+    let y = match &content.data {
+        XmlNodeData::Branch(children) => {
+            let mut x = children
+                .iter()
+                .flat_map(|child| create_mod_ops(child, state))
+                .collect::<Vec<_>>();
+            match (x.is_empty(), content.present) {
+                (false, false) => x.insert(0, format!("Add intermediate {}", content.name)),
+                (_, _) => {}
+            }
+            x
+        }
+        XmlNodeData::Leaf(old_value) => vec![match (state, content.present) {
+            (State::Included, true) => format!("Change {} to new value", content.name),
+            (State::Included, false) => format!("Allow {} from ancestor", content.name),
+            (State::Excluded, true) => format!("Keep {} from node", content.name),
+            (State::Excluded, false) => format!("Enforce {} from ancestor", content.name),
+            (State::ExcludedByAncestor, true) => format!("Keep {} from node", content.name),
+            (State::ExcludedByAncestor, false) => format!("Keep {} from ancestor", content.name),
+            (State::Forced, true) => format!("Change {} to new value", content.name),
+            (State::Forced, false) => format!("Set {} to new value", content.name),
+            (State::ForcedByAncestor, true) => format!("Change {} to new value", content.name),
+            (State::ForcedByAncestor, false) => format!("Allow {} from ancestor", content.name),
+        }],
+        XmlNodeData::None => vec![],
+    };
+
+    println!("{:?}", y);
+
+    y
+}
+
+fn create_mod_directory(mod_path: &PathBuf) {
+    std::fs::create_dir(&mod_path).unwrap();
+}
+
+pub(crate) fn delete_mod_files(mod_path: &PathBuf) {
+    let Ok(_) = std::fs::remove_dir_all(mod_path) else {
+        return;
+    };
+}
+
+fn enhanced_name(mod_name: &str) -> String {
+    format!("JJ's Enhanced {}", mod_name)
 }
