@@ -1,8 +1,11 @@
+use crate::{
+    xml_node::{XmlNode, XmlNodeData},
+    xml_structure::{Content, XmlTag},
+};
+use itertools::Itertools;
 use roxmltree::Node;
 use std::path::PathBuf;
 use walkdir::WalkDir;
-
-use crate::{xml_node::XmlNode, xml_structure::XmlTag};
 
 pub(crate) fn get_paths(path: &PathBuf) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
     let mut properties_paths = Vec::new();
@@ -47,37 +50,169 @@ pub(crate) fn get_xpath(node: &roxmltree::Node) -> String {
         .fold(String::new(), |acc, x| format!("{}/{}", acc, x))
 }
 
-pub(crate) fn extract_xml(node: &Node, xml_structure: &XmlTag) -> Option<XmlNode> {
-    let tag_name = xml_structure.get_name();
-
-    let children_nodes_with_tag_name = node
+pub(crate) fn has_properties_child(node: &Node<'_, '_>, query: &XmlTag) -> bool {
+    let Some(properties_node) = node
         .children()
-        .filter(|child| child.tag_name().name() == tag_name)
-        .collect::<Vec<_>>();
+        .filter(|child| child.tag_name().name() == "Properties")
+        .at_most_one()
+        .expect(
+            format!(
+                "More than one Properties node found in node {}",
+                get_xpath(&node)
+            )
+            .as_str(),
+        )
+    else {
+        return false;
+    };
 
-    if children_nodes_with_tag_name.is_empty() {
-        return None;
-    }
-    if children_nodes_with_tag_name.len() > 1 {
-        panic!("More than one child with the tag name {} in xpath {}", tag_name, get_xpath(node));
-    }
+    has_direct_child(&properties_node, query)
+}
 
-    let child_node = children_nodes_with_tag_name.first().unwrap();
+pub(crate) fn has_direct_child(node: &Node<'_, '_>, query: &XmlTag) -> bool {
+    node.children()
+        .filter(|child| child.tag_name().name() == query.name)
+        .count()
+        == 1
+}
 
-    match xml_structure {
-        XmlTag::Branch { children, .. } => {
-            let children = children
+pub(crate) fn extract_content_from_values(
+    node: &Node<'_, '_>,
+    query: &XmlTag,
+    parent_content: Option<&XmlNode>,
+) -> Option<XmlNode> {
+    let values_node = node
+        .children()
+        .filter(|child| child.tag_name().name() == "Values")
+        .at_most_one()
+        .expect(
+            format!(
+                "More than one Values node found in node {}",
+                get_xpath(&node)
+            )
+            .as_str(),
+        )
+        .expect(format!("No Values node found in node {}", get_xpath(&node)).as_str());
+
+    extract_content(&values_node, query, parent_content)
+}
+
+pub(crate) fn extract_content_from_properties(
+    node: &Node<'_, '_>,
+    query: &XmlTag,
+    parent_content: Option<&XmlNode>,
+) -> Option<XmlNode> {
+    let Some(properties_node) = node
+        .children()
+        .filter(|child| child.tag_name().name() == "Properties")
+        .at_most_one()
+        .expect(
+            format!(
+                "More than one Properties node found in node {}",
+                get_xpath(&node)
+            )
+            .as_str(),
+        )
+    else {
+        return create_content(query, parent_content);
+    };
+
+    extract_content(&properties_node, query, parent_content)
+}
+
+pub(crate) fn extract_content(
+    node: &Node<'_, '_>,
+    query: &XmlTag,
+    parent_content: Option<&XmlNode>,
+) -> Option<XmlNode> {
+    let Some(child_node) = node
+        .children()
+        .filter(|child| child.tag_name().name() == query.name)
+        .at_most_one()
+        .expect(
+            format!(
+                "More than one {} node found in node {}",
+                query.name,
+                get_xpath(&node)
+            )
+            .as_str(),
+        )
+    else {
+        return create_content(query, parent_content);
+    };
+
+    match &query.content {
+        Content::Branch(query_children) => {
+            let created_children = query_children
                 .iter()
-                .filter_map(|child| extract_xml(child_node, child))
-                .collect();
-            Some(XmlNode::Branch {
-                name: tag_name.to_string(),
-                children,
+                .filter_map(|query_child| {
+                    let parent_content_child = match parent_content {
+                        Some(parent_content) => match &parent_content.data {
+                            XmlNodeData::Branch(children) => {
+                                children.iter().find(|child| child.name == query_child.name)
+                            }
+                            _ => None,
+                        },
+                        None => None,
+                    };
+                    extract_content(&child_node, query_child, parent_content_child)
+                })
+                .collect::<Vec<_>>();
+            Some(XmlNode {
+                name: query.name.clone(),
+                present: true,
+                data: XmlNodeData::Branch(created_children),
             })
         }
-        XmlTag::Leaf { .. } => Some(XmlNode::Leaf {
-            name: tag_name.to_string(),
-            value: child_node.text().unwrap().to_string(),
-        }),
+        Content::Leaf => {
+            let Some(text) = child_node.text().and_then(|text| Some(text.to_string())) else {
+                return None;
+            };
+            Some(XmlNode {
+                name: query.name.clone(),
+                present: true,
+                data: XmlNodeData::Leaf(text),
+            })
+        }
+    }
+}
+
+fn create_content(query: &XmlTag, parent_content: Option<&XmlNode>) -> Option<XmlNode> {
+    match &query.content {
+        Content::Branch(query_children) => {
+            let created_children = query_children
+                .iter()
+                .filter_map(|query_child| {
+                    let parent_content_child = match parent_content {
+                        Some(parent_content) => match &parent_content.data {
+                            XmlNodeData::Branch(children) => {
+                                children.iter().find(|child| child.name == query_child.name)
+                            }
+                            _ => None,
+                        },
+                        None => None,
+                    };
+                    create_content(query_child, parent_content_child)
+                })
+                .collect::<Vec<_>>();
+            return Some(XmlNode {
+                name: query.name.clone(),
+                present: false,
+                data: XmlNodeData::Branch(created_children.to_vec()),
+            });
+        }
+        Content::Leaf => {
+            return Some(XmlNode {
+                name: query.name.clone(),
+                present: false,
+                data: parent_content
+                    .map(|parent_content| match &parent_content.data {
+                        XmlNodeData::Branch(_) => XmlNodeData::None,
+                        XmlNodeData::Leaf(x) => XmlNodeData::Leaf(x.clone()),
+                        XmlNodeData::None => XmlNodeData::None,
+                    })
+                    .unwrap_or(XmlNodeData::None),
+            });
+        }
     }
 }

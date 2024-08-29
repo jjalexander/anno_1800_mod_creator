@@ -1,6 +1,21 @@
 #[derive(Eq, PartialEq, Hash, Debug, Clone)]
-pub(crate) enum Identifier {
-    XPath(String),
-    Name(String),
+pub(crate) struct Identifier {
+    pub(crate) file_path: String,
+    pub(crate) kind: Kind,
+    pub(crate) value: String,
+}
+
+#[derive(Eq, PartialEq, Hash, Debug, Clone)]
+pub(crate) enum Kind {
+    XPath,
+    Name,
+    GUID,
+}
+
+#[derive(Eq, Hash, PartialEq, Debug, Clone)]
+pub(crate) enum ParentIdentifier {
+    None,
+    DefaultValues,
+    Template(String),
     GUID(String),
 }
