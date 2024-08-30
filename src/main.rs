@@ -47,53 +47,53 @@ fn main() {
     }
     println!("----------------------------------------");
 
-    // // Mod name
-    // let mod_name: &str = "Production";
-
-    // // XML structure
-    // let query: XmlTag = XmlTag {
-    //     name: "FactoryBase".to_string(),
-    //     content: Content::Branch(vec![XmlTag {
-    //         name: "CycleTime".to_string(),
-    //         content: Content::Leaf,
-    //     }]),
-    // };
-
-    // // Excluded templates
-    // let excluded_templates: Vec<String> = vec![
-    //     "Heater_Arctic".to_owned(),
-    //     "PowerplantBuilding".to_owned(),
-    //     "BuffFactoryModule".to_owned(),
-    //     "Mall".to_owned(),
-    //     "TowerRestaurant".to_owned(),
-    // ];
-
-    // // Excluded GUIDs
-    // let excluded_guids: Vec<String> = vec![];
-
-    // // Forced GUIDs
-    // let forced_guids: Vec<String> = vec!["24861".to_owned(), "24845".to_owned()];
-
     // Mod name
-    let mod_name = "Crafting";
+    let mod_name: &str = "Production";
 
-    // Xml structure
-    let query = XmlTag {
-        name: "Craftable".to_string(),
+    // XML structure
+    let query: XmlTag = XmlTag {
+        name: "FactoryBase".to_string(),
         content: Content::Branch(vec![XmlTag {
-            name: "CraftingTime".to_string(),
+            name: "CycleTime".to_string(),
             content: Content::Leaf,
         }]),
     };
 
     // Excluded templates
-    let excluded_templates: Vec<String> = vec![];
+    let excluded_templates: Vec<String> = vec![
+        "Heater_Arctic".to_owned(),
+        "PowerplantBuilding".to_owned(),
+        "BuffFactoryModule".to_owned(),
+        "Mall".to_owned(),
+        "TowerRestaurant".to_owned(),
+    ];
 
     // Excluded GUIDs
     let excluded_guids: Vec<String> = vec![];
 
     // Forced GUIDs
-    let forced_guids: Vec<String> = vec![];
+    let forced_guids: Vec<String> = vec!["24861".to_owned(), "24845".to_owned()];
+
+    // // Mod name
+    // let mod_name = "Crafting";
+
+    // // Xml structure
+    // let query = XmlTag {
+    //     name: "Craftable".to_string(),
+    //     content: Content::Branch(vec![XmlTag {
+    //         name: "CraftingTime".to_string(),
+    //         content: Content::Leaf,
+    //     }]),
+    // };
+
+    // // Excluded templates
+    // let excluded_templates: Vec<String> = vec![];
+
+    // // Excluded GUIDs
+    // let excluded_guids: Vec<String> = vec![];
+
+    // // Forced GUIDs
+    // let forced_guids: Vec<String> = vec![];
 
     let mut identifiers: Vec<Identifier> = Vec::new();
     let mut identifiers_as_parent: HashMap<ParentIdentifier, Identifier> = HashMap::new();

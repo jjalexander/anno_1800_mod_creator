@@ -231,11 +231,11 @@ pub(crate) fn create_mod(
 ) {
     let mod_path = output_path.join(enhanced_name(mod_name));
 
-    delete_mod_files(&mod_path);
+    // delete_mod_files(&mod_path);
 
-    create_mod_directory(&mod_path);
+    // create_mod_directory(&mod_path);
 
-    let mut path_vs_mod_ops: HashMap<String, Vec<String>> = HashMap::new();
+    // let mut path_vs_mod_ops: HashMap<String, Vec<ModOpsStructure>> = HashMap::new();
 
     identifiers.into_iter().for_each(|identifier| {
         let file_path = identifier.file_path.clone();
@@ -244,67 +244,94 @@ pub(crate) fn create_mod(
 
         let mod_ops = create_mod_ops(content, state);
 
-        let mod_ops = mod_ops
-            .into_iter()
-            .map(|mod_op| format!("{}: {}", identifier.value, mod_op))
-            .collect::<Vec<_>>();
-
-        if mod_ops.is_empty() {
-            return;
+        match mod_ops {
+            ModOpsStructure::None => return,
+            _ => println!("{:?} - {:?}", identifier, mod_ops),
         }
 
-        path_vs_mod_ops
-            .entry(file_path)
-            .or_insert_with(Vec::new)
-            .extend(mod_ops);
+        // path_vs_mod_ops
+        //     .entry(file_path)
+        //     .or_insert_with(Vec::new)
+        //     .push(mod_ops);
     });
 
-    path_vs_mod_ops.iter().for_each(|(path, mod_ops)| {
-        let full_path = mod_path.join(path);
-        let parent_path = full_path.parent().unwrap();
-        std::fs::create_dir_all(parent_path).unwrap();
-        std::fs::File::create(&full_path).unwrap();
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .open(full_path)
-            .unwrap();
-        mod_ops.iter().for_each(|mod_op| {
-            writeln!(file, "{}", mod_op).unwrap();
-        });
-    });
+    // path_vs_mod_ops.iter().for_each(|(path, mod_ops)| {
+    //     let full_path = mod_path.join(path);
+    //     let parent_path = full_path.parent().unwrap();
+    //     std::fs::create_dir_all(parent_path).unwrap();
+    //     std::fs::File::create(&full_path).unwrap();
+    //     let mut file = std::fs::OpenOptions::new()
+    //         .write(true)
+    //         .open(full_path)
+    //         .unwrap();
+    //     mod_ops.iter().for_each(|mod_op| {
+    //         writeln!(file, "{:?}", mod_op).unwrap();
+    //     });
+    // });
 }
 
-fn create_mod_ops(content: &XmlNode, state: &State) -> Vec<String> {
+fn create_mod_ops(content: &XmlNode, state: &State) -> ModOpsStructure {
     let y = match &content.data {
         XmlNodeData::Branch(children) => {
-            let mut x = children
+            let child_mod_ops = children
                 .iter()
-                .flat_map(|child| create_mod_ops(child, state))
+                .map(|child| create_mod_ops(child, state))
+                .filter(|mod_ops| match mod_ops {
+                    ModOpsStructure::None => false,
+                    _ => true,
+                })
                 .collect::<Vec<_>>();
-            match (x.is_empty(), content.present) {
-                (false, false) => x.insert(0, format!("Add intermediate {}", content.name)),
-                (_, _) => {}
+            match child_mod_ops.is_empty() {
+                true => ModOpsStructure::None,
+                false => match content.present {
+                    true => ModOpsStructure::Leafs(child_mod_ops),
+                    false => ModOpsStructure::Branch(
+                        format!("Add intermediate node {}", content.name),
+                        child_mod_ops,
+                    ),
+                },
             }
-            x
         }
-        XmlNodeData::Leaf(old_value) => vec![match (state, content.present) {
-            (State::Included, true) => format!("Change {} to new value", content.name),
-            (State::Included, false) => format!("Allow {} from ancestor", content.name),
-            (State::Excluded, true) => format!("Keep {} from node", content.name),
-            (State::Excluded, false) => format!("Enforce {} from ancestor", content.name),
-            (State::ExcludedByAncestor, true) => format!("Keep {} from node", content.name),
-            (State::ExcludedByAncestor, false) => format!("Keep {} from ancestor", content.name),
-            (State::Forced, true) => format!("Change {} to new value", content.name),
-            (State::Forced, false) => format!("Set {} to new value", content.name),
-            (State::ForcedByAncestor, true) => format!("Change {} to new value", content.name),
-            (State::ForcedByAncestor, false) => format!("Allow {} from ancestor", content.name),
-        }],
-        XmlNodeData::None => vec![],
+        XmlNodeData::Leaf(old_value) => match (state, content.present) {
+            (State::Included, true) => ModOpsStructure::Leaf(format!("Replace {}", content.name)),
+            (State::Included, false) => {
+                ModOpsStructure::Leaf(format!("Allow {} from ancestor", content.name))
+            }
+            (State::Excluded, true) => ModOpsStructure::Leaf(format!("Keep {}", content.name)),
+            (State::Excluded, false) => {
+                ModOpsStructure::Leaf(format!("Enforce {} from ancestor", content.name))
+            }
+            (State::ExcludedByAncestor, true) => {
+                ModOpsStructure::Leaf(format!("Keep {}", content.name))
+            }
+            (State::ExcludedByAncestor, false) => {
+                ModOpsStructure::Leaf(format!("Keep {} from ancestor", content.name))
+            }
+            (State::Forced, true) => {
+                ModOpsStructure::Leaf(format!("Change {} to new value", content.name))
+            }
+            (State::Forced, false) => {
+                ModOpsStructure::Leaf(format!("Set {} to new value", content.name))
+            }
+            (State::ForcedByAncestor, true) => {
+                ModOpsStructure::Leaf(format!("Change {}", content.name))
+            }
+            (State::ForcedByAncestor, false) => {
+                ModOpsStructure::Leaf(format!("Allow {} from ancestor", content.name))
+            }
+        },
+        XmlNodeData::None => ModOpsStructure::None,
     };
 
-    println!("{:?}", y);
-
     y
+}
+
+#[derive(PartialEq, Debug)]
+enum ModOpsStructure {
+    Branch(String, Vec<ModOpsStructure>),
+    Leafs(Vec<ModOpsStructure>),
+    Leaf(String),
+    None,
 }
 
 fn create_mod_directory(mod_path: &PathBuf) {
