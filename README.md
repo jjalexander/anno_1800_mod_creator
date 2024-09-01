@@ -6,4 +6,8 @@ The input path is expected to contain the extracted contents of the .rda files o
 
 Example of my input path called filtered_data:
 
-![alt text](image.png)
+![alt text](input.png)
+
+Example of some of the output:
+
+![alt text](output.png)
