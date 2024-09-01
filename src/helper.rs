@@ -1,9 +1,11 @@
 use crate::{
-    identifier::{Identifier, ParentIdentifier},
+    identifier::{self, Identifier},
     state::State,
     xml_node::{XmlNode, XmlNodeData},
     xml_structure::{Content, XmlTag},
+    NodeType,
 };
+use core::panic;
 use itertools::Itertools;
 use roxmltree::Node;
 use std::io::Write;
@@ -220,118 +222,270 @@ fn create_content(query: &XmlTag, parent_content: Option<&XmlNode>) -> Option<Xm
     }
 }
 
-pub(crate) fn create_mod(
+pub(crate) fn write_mod(
     output_path: &PathBuf,
     mod_name: &str,
     identifiers: &Vec<Identifier>,
-    identifiers_as_parent: &HashMap<ParentIdentifier, Identifier>,
-    parent_identifiers: &HashMap<Identifier, ParentIdentifier>,
+    node_types: &HashMap<Identifier, NodeType>,
     states: &HashMap<Identifier, State>,
     contents: &HashMap<Identifier, XmlNode>,
 ) {
     let mod_path = output_path.join(enhanced_name(mod_name));
 
-    // delete_mod_files(&mod_path);
+    delete_mod_files(&mod_path);
 
-    // create_mod_directory(&mod_path);
+    create_mod_directory(&mod_path);
 
-    // let mut path_vs_mod_ops: HashMap<String, Vec<ModOpsStructure>> = HashMap::new();
+    let mut path_vs_mod_ops: HashMap<String, Vec<ModOp>> = HashMap::new();
 
     identifiers.into_iter().for_each(|identifier| {
         let file_path = identifier.file_path.clone();
         let content = contents.get(identifier).unwrap();
         let state = states.get(identifier).unwrap();
+        let node_type = node_types.get(identifier).unwrap();
 
-        let mod_ops = create_mod_ops(content, state);
+        let mod_ops_structure = create_mod_ops_structure(content, state);
 
-        match mod_ops {
-            ModOpsStructure::None => return,
-            _ => println!("{:?} - {:?}", identifier, mod_ops),
+        if !are_any_changes_required(&mod_ops_structure) {
+            return;
         }
 
-        // path_vs_mod_ops
-        //     .entry(file_path)
-        //     .or_insert_with(Vec::new)
-        //     .push(mod_ops);
+        let mod_op_path_root = match identifier.kind {
+            identifier::Kind::XPath => match node_type {
+                NodeType::DefaultValues => format!("{}", identifier.value),
+                NodeType::Asset => format!("{}/Values", identifier.value),
+                _ => {
+                    panic!(
+                        "Unsupported node type for XPath identifier: {:?}",
+                        node_type
+                    );
+                }
+            },
+
+            identifier::Kind::Name => format!("//Template[Name='{}']/Properties", identifier.value),
+            identifier::Kind::GUID => format!(
+                "//Asset[Values/Standard/GUID = '{}']/Values",
+                identifier.value
+            ),
+        };
+
+        let mod_ops = convert_mod_ops_structure_to_mod_ops(mod_op_path_root, &mod_ops_structure);
+
+        path_vs_mod_ops
+            .entry(file_path)
+            .or_insert_with(Vec::new)
+            .extend(mod_ops);
     });
 
-    // path_vs_mod_ops.iter().for_each(|(path, mod_ops)| {
-    //     let full_path = mod_path.join(path);
-    //     let parent_path = full_path.parent().unwrap();
-    //     std::fs::create_dir_all(parent_path).unwrap();
-    //     std::fs::File::create(&full_path).unwrap();
-    //     let mut file = std::fs::OpenOptions::new()
-    //         .write(true)
-    //         .open(full_path)
-    //         .unwrap();
-    //     mod_ops.iter().for_each(|mod_op| {
-    //         writeln!(file, "{:?}", mod_op).unwrap();
-    //     });
-    // });
+    path_vs_mod_ops.iter().for_each(|(path, mod_ops)| {
+        let full_path = mod_path.join(path);
+        let parent_path = full_path.parent().unwrap();
+        std::fs::create_dir_all(parent_path).unwrap();
+        std::fs::File::create(&full_path).unwrap();
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .open(full_path)
+            .unwrap();
+        writeln!(file, "<ModOps>").unwrap();
+        mod_ops.iter().for_each(|mod_op| {
+            mod_op.to_xml().iter().for_each(|line| {
+                writeln!(file, "  {}", line).unwrap();
+            });
+        });
+        writeln!(file, "</ModOps>").unwrap();
+    });
 }
 
-fn create_mod_ops(content: &XmlNode, state: &State) -> ModOpsStructure {
-    let y = match &content.data {
+fn convert_mod_ops_structure_to_mod_ops(
+    mod_op_root_path: String,
+    mod_ops_structure: &ModOpsStructure,
+) -> Vec<ModOp> {
+    let mut mod_ops = Vec::new();
+
+    match &mod_ops_structure.kind {
+        ModOpsKind::ReplaceValue(value) => mod_ops.push(ModOp {
+            mod_op_type: "Replace".to_string(),
+            mod_op_path: format!("{}/{}", mod_op_root_path, mod_ops_structure.name),
+            mod_op_value: format!("<{0}>{1}</{0}>", mod_ops_structure.name, value),
+        }),
+        ModOpsKind::AddValue(value) => mod_ops.push(ModOp {
+            mod_op_type: "Add".to_string(),
+            mod_op_path: mod_op_root_path.clone(),
+            mod_op_value: format!("<{0}>{1}</{0}>", mod_ops_structure.name, value),
+        }),
+        ModOpsKind::AddNode => mod_ops.push(ModOp {
+            mod_op_type: "Add".to_string(),
+            mod_op_path: mod_op_root_path.clone(),
+            mod_op_value: format!("<{0}></{0}>", mod_ops_structure.name),
+        }),
+        ModOpsKind::None => (),
+    }
+
+    mod_ops_structure.children.iter().for_each(|child| {
+        mod_ops.extend(convert_mod_ops_structure_to_mod_ops(
+            format!("{}/{}", mod_op_root_path, mod_ops_structure.name),
+            child,
+        ))
+    });
+
+    mod_ops
+}
+
+#[derive(Debug)]
+struct ModOp {
+    mod_op_type: String,
+    mod_op_path: String,
+    mod_op_value: String,
+}
+
+impl ModOp {
+    fn to_xml(&self) -> Vec<String> {
+        let mut xml = Vec::new();
+        xml.push(format!(
+            "<ModOp Type=\"{0}\" Path=\"{1}\">",
+            self.mod_op_type, self.mod_op_path
+        ));
+        xml.push(format!("  {}", self.mod_op_value));
+        xml.push("</ModOp>".to_string());
+        xml
+    }
+}
+
+#[derive(PartialEq, Debug)]
+struct ModOpsStructure {
+    name: String,
+    kind: ModOpsKind,
+    children: Vec<ModOpsStructure>,
+}
+
+#[derive(PartialEq, Debug)]
+enum ModOpsKind {
+    ReplaceValue(String),
+    AddValue(String),
+    AddNode,
+    None,
+}
+
+fn are_any_changes_required(mod_ops: &ModOpsStructure) -> bool {
+    let are_changes_required_for_children = mod_ops
+        .children
+        .iter()
+        .any(|child| are_any_changes_required(child));
+
+    match mod_ops.kind {
+        ModOpsKind::ReplaceValue(_) | ModOpsKind::AddValue(_) | ModOpsKind::AddNode => true,
+        ModOpsKind::None => are_changes_required_for_children,
+    }
+}
+
+fn create_mod_ops_structure(content: &XmlNode, state: &State) -> ModOpsStructure {
+    let (kind, mod_ops) = match &content.data {
         XmlNodeData::Branch(children) => {
             let child_mod_ops = children
                 .iter()
-                .map(|child| create_mod_ops(child, state))
-                .filter(|mod_ops| match mod_ops {
-                    ModOpsStructure::None => false,
-                    _ => true,
-                })
+                .map(|child| create_mod_ops_structure(&child, state))
+                .filter(|mod_ops| are_any_changes_required(&mod_ops))
                 .collect::<Vec<_>>();
-            match child_mod_ops.is_empty() {
-                true => ModOpsStructure::None,
-                false => match content.present {
-                    true => ModOpsStructure::Leafs(child_mod_ops),
-                    false => ModOpsStructure::Branch(
-                        format!("Add intermediate node {}", content.name),
-                        child_mod_ops,
-                    ),
+            match content.present {
+                true => (ModOpsKind::None, child_mod_ops),
+                false => match child_mod_ops.is_empty() {
+                    true => (ModOpsKind::None, Vec::new()),
+                    false => (ModOpsKind::AddNode, child_mod_ops),
                 },
             }
         }
         XmlNodeData::Leaf(old_value) => match (state, content.present) {
-            (State::Included, true) => ModOpsStructure::Leaf(format!("Replace {}", content.name)),
-            (State::Included, false) => {
-                ModOpsStructure::Leaf(format!("Allow {} from ancestor", content.name))
-            }
-            (State::Excluded, true) => ModOpsStructure::Leaf(format!("Keep {}", content.name)),
-            (State::Excluded, false) => {
-                ModOpsStructure::Leaf(format!("Enforce {} from ancestor", content.name))
-            }
-            (State::ExcludedByAncestor, true) => {
-                ModOpsStructure::Leaf(format!("Keep {}", content.name))
-            }
-            (State::ExcludedByAncestor, false) => {
-                ModOpsStructure::Leaf(format!("Keep {} from ancestor", content.name))
-            }
-            (State::Forced, true) => {
-                ModOpsStructure::Leaf(format!("Change {} to new value", content.name))
-            }
-            (State::Forced, false) => {
-                ModOpsStructure::Leaf(format!("Set {} to new value", content.name))
-            }
-            (State::ForcedByAncestor, true) => {
-                ModOpsStructure::Leaf(format!("Change {}", content.name))
-            }
-            (State::ForcedByAncestor, false) => {
-                ModOpsStructure::Leaf(format!("Allow {} from ancestor", content.name))
-            }
+            (State::Included, true) => (
+                ModOpsKind::ReplaceValue(new_value(&content.name, old_value)),
+                Vec::new(),
+            ),
+            (State::Included, false) => (ModOpsKind::None, Vec::new()),
+            (State::Excluded, true) => (ModOpsKind::None, Vec::new()),
+            (State::Excluded, false) => (ModOpsKind::AddValue(old_value.clone()), Vec::new()),
+            (State::ExcludedByAncestor, true) => (ModOpsKind::None, Vec::new()),
+            (State::ExcludedByAncestor, false) => (ModOpsKind::None, Vec::new()),
+            (State::Forced, true) => (
+                ModOpsKind::ReplaceValue(new_value(&content.name, old_value)),
+                Vec::new(),
+            ),
+            (State::Forced, false) => (
+                ModOpsKind::AddValue(new_value(&content.name, old_value)),
+                Vec::new(),
+            ),
+            (State::ForcedByAncestor, true) => (
+                ModOpsKind::ReplaceValue(new_value(&content.name, old_value)),
+                Vec::new(),
+            ),
+            (State::ForcedByAncestor, false) => (ModOpsKind::None, Vec::new()),
         },
-        XmlNodeData::None => ModOpsStructure::None,
+        XmlNodeData::None => (ModOpsKind::None, Vec::new()),
     };
 
-    y
+    let x = ModOpsStructure {
+        name: content.name.clone(),
+        kind,
+        children: mod_ops,
+    };
+
+    x
 }
 
-#[derive(PartialEq, Debug)]
-enum ModOpsStructure {
-    Branch(String, Vec<ModOpsStructure>),
-    Leafs(Vec<ModOpsStructure>),
-    Leaf(String),
-    None,
+fn new_value(name: &str, current_value: &str) -> String {
+    match name {
+        "TransporterSpeed" => {
+            let mut value: f64 = current_value.parse().unwrap();
+            value = value * 30.0;
+            value.to_string()
+        }
+        "ResolverMovementSpeed" | "IntensityDecreaseRate" => {
+            let mut value: f64 = current_value.parse().unwrap();
+            value = value * 10.0;
+            value.to_string()
+        }
+        "StorageAmount" => {
+            let mut value: usize = current_value.parse().unwrap();
+            value = value * 10;
+            value.to_string()
+        }
+        "IndustrializationDistance"
+        | "FullSatisfactionDistance"
+        | "NoSatisfactionDistance"
+        | "HeatRange" => {
+            let mut value: usize = current_value.parse().unwrap();
+            value = value * 2;
+            value.to_string()
+        }
+        "CycleTime" => {
+            let mut value: usize = current_value.parse().unwrap();
+            value = value / 5;
+            value.to_string()
+        }
+        "LoadingTime" | "UnloadingTime" => {
+            let mut value: f64 = current_value.parse().unwrap();
+            value = value / 5.0;
+            value = value.ceil();
+            value.to_string()
+        }
+        "CraftingTime" => {
+            let mut value: usize = current_value.parse().unwrap();
+            value = value / 10;
+            value.to_string()
+        }
+        "MinPauseBetweenEvents" | "MaxPauseBetweenEvents" => {
+            let mut value: usize = current_value.parse().unwrap();
+            value = value / 5000;
+            value.to_string()
+        }
+        "ResolverUnitCount" => {
+            let mut value: usize = current_value.parse().unwrap();
+            value = value + 1;
+            value.to_string()
+        }
+        "MoveInMs" | "MoveOutMs" | "MoveRandomMs" => String::from("10"),
+        _ => {
+            todo!("new value {} not implemented yet", name);
+        }
+    }
 }
 
 fn create_mod_directory(mod_path: &PathBuf) {

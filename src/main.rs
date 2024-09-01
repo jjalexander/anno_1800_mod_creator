@@ -1,3 +1,5 @@
+use arguments::Arguments;
+use clap::Parser;
 use identifier::{Identifier, Kind, ParentIdentifier};
 use itertools::Itertools;
 use state::State;
@@ -5,6 +7,7 @@ use std::{collections::HashMap, path::PathBuf};
 use xml_node::XmlNode;
 use xml_structure::{Content, XmlTag};
 
+mod arguments;
 mod helper;
 mod identifier;
 mod state;
@@ -12,90 +15,224 @@ mod xml_node;
 mod xml_structure;
 
 fn main() {
-    // The path to the directory containing the properties, templates, and assets files.
-    let path = PathBuf::from("H:\\")
-        .join("Anno1800ModSupport")
-        .join("filtered_data");
-
-    // The path to the directory containing the mod files.
-    let mod_path = PathBuf::from("D:\\")
-        .join("Ubisoft Games")
-        .join("Anno 1800")
-        .join("mods");
+    let args = Arguments::parse();
 
     // Get the paths of properties, templates, and assets files.
-    let (properties_paths, template_paths, assets_paths) = helper::get_paths(&path);
-
-    // Print the paths of the properties files.
-    println!("Properties paths:");
-    for path in &properties_paths {
-        println!("- {}", path.display());
-    }
-    println!("----------------------------------------");
-
-    // Print the paths of the templates files.
-    println!("Templates paths:");
-    for path in &template_paths {
-        println!("- {}", path.display());
-    }
-    println!("----------------------------------------");
-
-    // Print the paths of the assets files.
-    println!("Assets paths:");
-    for path in &assets_paths {
-        println!("- {}", path.display());
-    }
-    println!("----------------------------------------");
+    let (properties_paths, template_paths, assets_paths) = helper::get_paths(&args.input_path);
 
     // Mod name
-    let mod_name: &str = "Production";
-
-    // XML structure
-    let query: XmlTag = XmlTag {
-        name: "FactoryBase".to_string(),
-        content: Content::Branch(vec![XmlTag {
-            name: "CycleTime".to_string(),
-            content: Content::Leaf,
-        }]),
-    };
-
-    // Excluded templates
-    let excluded_templates: Vec<String> = vec![
-        "Heater_Arctic".to_owned(),
-        "PowerplantBuilding".to_owned(),
-        "BuffFactoryModule".to_owned(),
-        "Mall".to_owned(),
-        "TowerRestaurant".to_owned(),
+    let mods: Vec<(String, XmlTag, Vec<String>, Vec<String>, Vec<String>)> = vec![
+        (
+            "Production".to_string(),
+            XmlTag {
+                name: "FactoryBase".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "CycleTime".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![
+                "Heater_Arctic".to_owned(),
+                "PowerplantBuilding".to_owned(),
+                "BuffFactoryModule".to_owned(),
+                "Mall".to_owned(),
+                "TowerRestaurant".to_owned(),
+            ],
+            vec![],
+            vec!["24861".to_owned(), "24845".to_owned()],
+        ),
+        (
+            "Transporters".to_string(),
+            XmlTag {
+                name: "Transporter7".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "TransporterSpeed".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "ProcessingTimes".to_string(),
+                        content: Content::Branch(vec![
+                            XmlTag {
+                                name: "LoadingTime".to_string(),
+                                content: Content::Leaf,
+                            },
+                            XmlTag {
+                                name: "UnloadingTime".to_string(),
+                                content: Content::Leaf,
+                            },
+                        ]),
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Ship Building Times".to_string(),
+            XmlTag {
+                name: "Craftable".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "CraftingTime".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Immigration Speed".to_string(),
+            XmlTag {
+                name: "Residence7".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "MoveInMs".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "MoveOutMs".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "MoveRandomMs".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Expeditions".to_string(),
+            XmlTag {
+                name: "Expedition".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "MinPauseBetweenEvents".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "MaxPauseBetweenEvents".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Resolver Unit Count".to_string(),
+            XmlTag {
+                name: "IncidentResolver".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "ResolverUnitCount".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Resolver Units".to_string(),
+            XmlTag {
+                name: "IncidentResolverUnit".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "ResolverMovementSpeed".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "IntensityDecreaseRate".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Electricity".to_string(),
+            XmlTag {
+                name: "Powerplant".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "IndustrializationDistance".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Public Services".to_string(),
+            XmlTag {
+                name: "PublicService".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "FullSatisfactionDistance".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "NoSatisfactionDistance".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Heaters".to_string(),
+            XmlTag {
+                name: "HeatProvider".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "HeatRange".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
     ];
 
-    // Excluded GUIDs
-    let excluded_guids: Vec<String> = vec![];
+    mods.iter().for_each(
+        |(mod_name, query, excluded_templates, forced_guids, excluded_guids)| {
+            create_mod(
+                properties_paths.clone(),
+                query.clone(),
+                template_paths.clone(),
+                excluded_templates.clone(),
+                assets_paths.clone(),
+                forced_guids.clone(),
+                excluded_guids.clone(),
+                args.output_path.clone(),
+                mod_name,
+            );
+        },
+    );
+}
 
-    // Forced GUIDs
-    let forced_guids: Vec<String> = vec!["24861".to_owned(), "24845".to_owned()];
-
-    // // Mod name
-    // let mod_name = "Crafting";
-
-    // // Xml structure
-    // let query = XmlTag {
-    //     name: "Craftable".to_string(),
-    //     content: Content::Branch(vec![XmlTag {
-    //         name: "CraftingTime".to_string(),
-    //         content: Content::Leaf,
-    //     }]),
-    // };
-
-    // // Excluded templates
-    // let excluded_templates: Vec<String> = vec![];
-
-    // // Excluded GUIDs
-    // let excluded_guids: Vec<String> = vec![];
-
-    // // Forced GUIDs
-    // let forced_guids: Vec<String> = vec![];
-
+fn create_mod(
+    properties_paths: Vec<PathBuf>,
+    query: XmlTag,
+    template_paths: Vec<PathBuf>,
+    excluded_templates: Vec<String>,
+    assets_paths: Vec<PathBuf>,
+    forced_guids: Vec<String>,
+    excluded_guids: Vec<String>,
+    mod_path: PathBuf,
+    mod_name: &str,
+) {
     let mut identifiers: Vec<Identifier> = Vec::new();
+    let mut node_types: HashMap<Identifier, NodeType> = HashMap::new();
     let mut identifiers_as_parent: HashMap<ParentIdentifier, Identifier> = HashMap::new();
     let mut parent_identifiers: HashMap<Identifier, ParentIdentifier> = HashMap::new();
     let mut states: HashMap<Identifier, State> = HashMap::new();
@@ -130,14 +267,13 @@ fn main() {
                 };
 
                 identifiers.push(identifier.clone());
+                node_types.insert(identifier.clone(), NodeType::DefaultValues);
                 identifiers_as_parent.insert(ParentIdentifier::DefaultValues, identifier.clone());
                 parent_identifiers.insert(identifier.clone(), ParentIdentifier::None);
                 states.insert(identifier.clone(), State::Included);
                 contents.insert(identifier.clone(), content);
             });
     }
-
-    println!("Total default values nodes: {}", identifiers.len());
 
     // Iterate over the templates files.
     for path in template_paths {
@@ -174,6 +310,7 @@ fn main() {
                 };
 
                 identifiers.push(identifier.clone());
+                node_types.insert(identifier.clone(), NodeType::Template);
                 identifiers_as_parent.insert(
                     ParentIdentifier::Template(identifier.value.clone()),
                     identifier.clone(),
@@ -189,11 +326,6 @@ fn main() {
                 contents.insert(identifier.clone(), content);
             });
     }
-
-    println!(
-        "Total default values and template nodes: {}",
-        identifiers.len()
-    );
 
     // Iterate over the assets files.
     for path in &assets_paths {
@@ -251,6 +383,7 @@ fn main() {
                 };
 
                 identifiers.push(identifier.clone());
+                node_types.insert(identifier.clone(), NodeType::Asset);
                 match identifier.kind {
                     Kind::GUID => {
                         identifiers_as_parent.insert(
@@ -266,43 +399,11 @@ fn main() {
             });
     }
 
-    println!(
-        "Total default values, template, and asset nodes: {}",
-        identifiers.len()
-    );
-
-    println!("----------------------------------------");
-
-    // // Print the data
-    // for identifier in &identifiers {
-    //     let mut strings = Vec::new();
-
-    //     strings.push(format!("{:?}", identifier));
-
-    //     match identifiers_as_parent
-    //         .iter()
-    //         .find(|(_, value)| *value == identifier)
-    //     {
-    //         Some((parent_identifier, _)) => strings.push(format!("{:?}", parent_identifier)),
-    //         None => strings.push("None".to_string()),
-    //     }
-
-    //     strings.push(format!("{:?}", parent_identifiers.get(identifier).unwrap()));
-
-    //     strings.push(format!("{:?}", states.get(identifier).unwrap()));
-
-    //     strings.push(format!("{:?}", contents.get(identifier).unwrap()));
-
-    //     println!("{}", strings.join(" | "));
-    //     println!("----------------------------------------");
-    // }
-
-    helper::create_mod(
+    helper::write_mod(
         &mod_path,
         mod_name,
         &identifiers,
-        &identifiers_as_parent,
-        &parent_identifiers,
+        &node_types,
         &states,
         &contents,
     );
@@ -434,4 +535,11 @@ fn create_default_values_identifier(path: &String, node: &roxmltree::Node<'_, '_
         kind: Kind::XPath,
         value: helper::get_xpath(&node),
     }
+}
+
+#[derive(Debug)]
+enum NodeType {
+    DefaultValues,
+    Template,
+    Asset,
 }
