@@ -421,13 +421,13 @@ fn create_mod_ops_structure(content: &XmlNode, state: &State) -> ModOpsStructure
         XmlNodeData::None => (ModOpsKind::None, Vec::new()),
     };
 
-    let x = ModOpsStructure {
+    let mod_ops_structure = ModOpsStructure {
         name: content.name.clone(),
         kind,
         children: mod_ops,
     };
 
-    x
+    mod_ops_structure
 }
 
 fn new_value(name: &str, current_value: &str) -> String {
@@ -489,13 +489,23 @@ fn new_value(name: &str, current_value: &str) -> String {
 }
 
 fn create_mod_directory(mod_path: &PathBuf) {
-    std::fs::create_dir(&mod_path).unwrap();
+    match std::fs::create_dir(&mod_path) {
+        Err(error) => match error.kind() {
+            std::io::ErrorKind::AlreadyExists => (),
+            _ => panic!("Error creating {mod_path:?}: {error}"),
+        },
+        _ => (),
+    }
 }
 
 pub(crate) fn delete_mod_files(mod_path: &PathBuf) {
-    let Ok(_) = std::fs::remove_dir_all(mod_path) else {
-        return;
-    };
+    match std::fs::remove_dir_all(mod_path) {
+        Err(error) => match error.kind() {
+            std::io::ErrorKind::NotFound => (),
+            _ => panic!("Error deleting {mod_path:?}: {error}"),
+        },
+        _ => (),
+    }
 }
 
 fn enhanced_name(mod_name: &str) -> String {

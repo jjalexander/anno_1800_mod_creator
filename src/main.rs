@@ -206,13 +206,14 @@ fn main() {
     mods.iter().for_each(
         |(mod_name, query, excluded_templates, forced_guids, excluded_guids)| {
             create_mod(
-                properties_paths.clone(),
                 query.clone(),
+                properties_paths.clone(),
                 template_paths.clone(),
                 excluded_templates.clone(),
                 assets_paths.clone(),
                 forced_guids.clone(),
                 excluded_guids.clone(),
+                args.input_path.clone(),
                 args.output_path.clone(),
                 mod_name,
             );
@@ -221,14 +222,15 @@ fn main() {
 }
 
 fn create_mod(
-    properties_paths: Vec<PathBuf>,
     query: XmlTag,
+    properties_paths: Vec<PathBuf>,
     template_paths: Vec<PathBuf>,
     excluded_templates: Vec<String>,
     assets_paths: Vec<PathBuf>,
     forced_guids: Vec<String>,
     excluded_guids: Vec<String>,
-    mod_path: PathBuf,
+    input_path: PathBuf,
+    output_path: PathBuf,
     mod_name: &str,
 ) {
     let mut identifiers: Vec<Identifier> = Vec::new();
@@ -247,8 +249,10 @@ fn create_mod(
         let xml = roxmltree::Document::parse(&xml_string).unwrap();
 
         let inner_data_path = path
+            .strip_prefix(&input_path)
+            .unwrap()
             .iter()
-            .skip(5)
+            .skip(1)
             .map(|s| s.to_str().unwrap())
             .collect::<Vec<_>>()
             .join("\\");
@@ -284,8 +288,10 @@ fn create_mod(
         let xml = roxmltree::Document::parse(&xml_string).unwrap();
 
         let inner_data_path = path
+            .strip_prefix(&input_path)
+            .unwrap()
             .iter()
-            .skip(5)
+            .skip(1)
             .map(|s| s.to_str().unwrap())
             .collect::<Vec<_>>()
             .join("\\");
@@ -336,8 +342,10 @@ fn create_mod(
         let xml = roxmltree::Document::parse(&xml_string).unwrap();
 
         let inner_data_path = path
+            .strip_prefix(&input_path)
+            .unwrap()
             .iter()
-            .skip(5)
+            .skip(1)
             .map(|s| s.to_str().unwrap())
             .collect::<Vec<_>>()
             .join("\\");
@@ -400,7 +408,7 @@ fn create_mod(
     }
 
     helper::write_mod(
-        &mod_path,
+        &output_path,
         mod_name,
         &identifiers,
         &node_types,
