@@ -1,0 +1,22 @@
+# add name of the workflow
+name: Rust CI
+
+# add the event that triggers the workflow
+on:
+  push:
+    tags:
+      - 'v*'
+
+# add the jobs that the workflow will run
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
