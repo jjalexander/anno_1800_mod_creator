@@ -1,13 +1,13 @@
-# add name of the workflow
-name: Rust CI
+name: Release
 
-# add the event that triggers the workflow
+permissions:
+  contents: write
+
 on:
   push:
     tags:
       - v[0-9]+.*
 
-# add the jobs that the workflow will run
 jobs:
   create-release:
     runs-on: ubuntu-latest
