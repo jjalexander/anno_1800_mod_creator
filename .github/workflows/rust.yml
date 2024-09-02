@@ -9,25 +9,21 @@ on:
 
 # add the jobs that the workflow will run
 jobs:
-  build:
+  create-release:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: taiki-e/create-gh-release-action@v1
         with:
-          toolchain: stable
+          changelog: CHANGELOG.md
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build
-        run: cargo build --all --release
-
-      # add the executable to the release
-      - name: Archive release
-        uses: actions/upload-artifact@v2
+  upload-assets:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/upload-rust-binary-action@v1
         with:
-          name: release
-          path: target/release/anno_1800_mod_creator.exe
-        
+          bin: anno_1800_mod_creator
+          token: ${{ secrets.GITHUB_TOKEN }}

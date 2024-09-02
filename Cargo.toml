@@ -3,6 +3,11 @@ name = "anno_1800_mod_creator"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "symbols"
+
 [dependencies]
 clap = { version = "4.5.16", features = ["derive"] }
 itertools = "0.13.0"
