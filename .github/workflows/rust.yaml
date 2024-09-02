@@ -20,3 +20,14 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
+      - name: Build
+        run: cargo build --all --release
+
+      # add the executable to the release
+      - name: Archive release
+        uses: actions/upload-artifact@v2
+        with:
+          name: release
+          path: target/release/anno_1800_mod_creator.exe
+        
