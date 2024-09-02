@@ -5,7 +5,7 @@ name: Rust CI
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 # add the jobs that the workflow will run
 jobs:
@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Install Rust
+      - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
