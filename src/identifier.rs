@@ -1,6 +1,8 @@
+use std::path::PathBuf;
+
 #[derive(Eq, PartialEq, Hash, Debug, Clone)]
 pub(crate) struct Identifier {
-    pub(crate) file_path: String,
+    pub(crate) file_path: PathBuf,
     pub(crate) kind: Kind,
     pub(crate) value: String,
 }

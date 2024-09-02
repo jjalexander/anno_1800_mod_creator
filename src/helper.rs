@@ -236,7 +236,7 @@ pub(crate) fn write_mod(
 
     create_mod_directory(&mod_path);
 
-    let mut path_vs_mod_ops: HashMap<String, Vec<ModOp>> = HashMap::new();
+    let mut path_vs_mod_ops: HashMap<PathBuf, Vec<ModOp>> = HashMap::new();
 
     identifiers.into_iter().for_each(|identifier| {
         let file_path = identifier.file_path.clone();
