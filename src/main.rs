@@ -41,166 +41,166 @@ fn main() {
             vec![],
             vec!["24861".to_owned(), "24845".to_owned()],
         ),
-        // (
-        //     "Transporters".to_string(),
-        //     XmlTag {
-        //         name: "Transporter7".to_string(),
-        //         content: Content::Branch(vec![
-        //             XmlTag {
-        //                 name: "TransporterSpeed".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //             XmlTag {
-        //                 name: "ProcessingTimes".to_string(),
-        //                 content: Content::Branch(vec![
-        //                     XmlTag {
-        //                         name: "LoadingTime".to_string(),
-        //                         content: Content::Leaf,
-        //                     },
-        //                     XmlTag {
-        //                         name: "UnloadingTime".to_string(),
-        //                         content: Content::Leaf,
-        //                     },
-        //                 ]),
-        //             },
-        //         ]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Ship Building Times".to_string(),
-        //     XmlTag {
-        //         name: "Craftable".to_string(),
-        //         content: Content::Branch(vec![XmlTag {
-        //             name: "CraftingTime".to_string(),
-        //             content: Content::Leaf,
-        //         }]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Immigration Speed".to_string(),
-        //     XmlTag {
-        //         name: "Residence7".to_string(),
-        //         content: Content::Branch(vec![
-        //             XmlTag {
-        //                 name: "MoveInMs".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //             XmlTag {
-        //                 name: "MoveOutMs".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //             XmlTag {
-        //                 name: "MoveRandomMs".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //         ]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Expeditions".to_string(),
-        //     XmlTag {
-        //         name: "Expedition".to_string(),
-        //         content: Content::Branch(vec![
-        //             XmlTag {
-        //                 name: "MinPauseBetweenEvents".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //             XmlTag {
-        //                 name: "MaxPauseBetweenEvents".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //         ]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Resolver Unit Count".to_string(),
-        //     XmlTag {
-        //         name: "IncidentResolver".to_string(),
-        //         content: Content::Branch(vec![XmlTag {
-        //             name: "ResolverUnitCount".to_string(),
-        //             content: Content::Leaf,
-        //         }]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Resolver Units".to_string(),
-        //     XmlTag {
-        //         name: "IncidentResolverUnit".to_string(),
-        //         content: Content::Branch(vec![
-        //             XmlTag {
-        //                 name: "ResolverMovementSpeed".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //             XmlTag {
-        //                 name: "IntensityDecreaseRate".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //         ]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Electricity".to_string(),
-        //     XmlTag {
-        //         name: "Powerplant".to_string(),
-        //         content: Content::Branch(vec![XmlTag {
-        //             name: "IndustrializationDistance".to_string(),
-        //             content: Content::Leaf,
-        //         }]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Public Services".to_string(),
-        //     XmlTag {
-        //         name: "PublicService".to_string(),
-        //         content: Content::Branch(vec![
-        //             XmlTag {
-        //                 name: "FullSatisfactionDistance".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //             XmlTag {
-        //                 name: "NoSatisfactionDistance".to_string(),
-        //                 content: Content::Leaf,
-        //             },
-        //         ]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
-        // (
-        //     "Heaters".to_string(),
-        //     XmlTag {
-        //         name: "HeatProvider".to_string(),
-        //         content: Content::Branch(vec![XmlTag {
-        //             name: "HeatRange".to_string(),
-        //             content: Content::Leaf,
-        //         }]),
-        //     },
-        //     vec![],
-        //     vec![],
-        //     vec![],
-        // ),
+        (
+            "Transporters".to_string(),
+            XmlTag {
+                name: "Transporter7".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "TransporterSpeed".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "ProcessingTimes".to_string(),
+                        content: Content::Branch(vec![
+                            XmlTag {
+                                name: "LoadingTime".to_string(),
+                                content: Content::Leaf,
+                            },
+                            XmlTag {
+                                name: "UnloadingTime".to_string(),
+                                content: Content::Leaf,
+                            },
+                        ]),
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Ship Building Times".to_string(),
+            XmlTag {
+                name: "Craftable".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "CraftingTime".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Immigration Speed".to_string(),
+            XmlTag {
+                name: "Residence7".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "MoveInMs".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "MoveOutMs".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "MoveRandomMs".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Expeditions".to_string(),
+            XmlTag {
+                name: "Expedition".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "MinPauseBetweenEvents".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "MaxPauseBetweenEvents".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Resolver Unit Count".to_string(),
+            XmlTag {
+                name: "IncidentResolver".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "ResolverUnitCount".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Resolver Units".to_string(),
+            XmlTag {
+                name: "IncidentResolverUnit".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "ResolverMovementSpeed".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "IntensityDecreaseRate".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Electricity".to_string(),
+            XmlTag {
+                name: "Powerplant".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "IndustrializationDistance".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Public Services".to_string(),
+            XmlTag {
+                name: "PublicService".to_string(),
+                content: Content::Branch(vec![
+                    XmlTag {
+                        name: "FullSatisfactionDistance".to_string(),
+                        content: Content::Leaf,
+                    },
+                    XmlTag {
+                        name: "NoSatisfactionDistance".to_string(),
+                        content: Content::Leaf,
+                    },
+                ]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
+        (
+            "Heaters".to_string(),
+            XmlTag {
+                name: "HeatProvider".to_string(),
+                content: Content::Branch(vec![XmlTag {
+                    name: "HeatRange".to_string(),
+                    content: Content::Leaf,
+                }]),
+            },
+            vec![],
+            vec![],
+            vec![],
+        ),
     ];
 
     mods.iter().for_each(
